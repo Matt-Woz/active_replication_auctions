@@ -9,6 +9,7 @@ import org.jgroups.util.RspList;
 import utility.GroupUtilities;
 
 import java.util.ArrayList;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 
@@ -31,8 +32,6 @@ public class Backend {
         }
         // Make this instance of Backend a dispatcher in the channel (group)
         this.dispatcher = new RpcDispatcher(this.groupChannel, this);
-        ConcurrentHashMap<Integer, AuctionItem> tempItemMap = new ConcurrentHashMap<>();
-        ConcurrentHashMap<String, Client> tempUserMap = new ConcurrentHashMap<>();
 
         RspList<ConcurrentHashMap<Integer, AuctionItem>> itemResponse = dispatcher.callRemoteMethods(null, "getItems",
                 null, null,
@@ -40,26 +39,32 @@ public class Backend {
         RspList<ConcurrentHashMap<String, Client>> userResponse = dispatcher.callRemoteMethods(null, "getUsers",
                 null, null,
                 new RequestOptions(ResponseMode.GET_ALL, DISPATCHER_TIMEOUT));
-        System.out.println("ITEM RESPONSE:" + itemResponse.getResults().get(0) +"\n");
-        System.out.println("USER RESPONSE:" + userResponse.getResults().get(0)+"\n");
-        if (itemResponse.isEmpty()) {
-            System.out.println("BLAH BLAH");
-            items = tempItemMap;
+
+        ConcurrentHashMap<Integer, AuctionItem> tempAuctionmap;
+        if(itemResponse.isEmpty()) {
+            tempAuctionmap=new ConcurrentHashMap<Integer,AuctionItem>();
         }
         else{
-            System.out.println("NO BLAH BLAH");
-            items = itemResponse.getResults().get(0);
+            tempAuctionmap = itemResponse.getResults().get(0);
         }
-        if(userResponse.isEmpty()){
-            System.out.println("USER BLAH BLAH");
-            users = tempUserMap;
+        items = tempAuctionmap;
+        ConcurrentHashMap<String,Client> tempClientmap;
+        System.out.println("The client list "+ userResponse.getResults());
+        if(userResponse.isEmpty()) {
+            tempClientmap=new ConcurrentHashMap<String,Client>();
         }
         else{
-            System.out.println("USER NO BLAH BLAH");
-            users = userResponse.getResults().get(0);
+            tempClientmap = userResponse.getResults().get(0);
         }
+        users = tempClientmap;
+
     }
 
+    public int kill()
+    {
+        System.exit(0);
+        return 0;
+    }
 
     public int createListing(int AuctionID, String itemDescription, int startingPrice, int reservePrice, Client seller) {
         items.put(AuctionID, new AuctionItem(AuctionID, itemDescription, startingPrice, reservePrice, seller));
@@ -72,24 +77,24 @@ public class Backend {
         {
             return "Error: item does not exist.\n";
         }
-        if(items.get(itemId).getSeller().getEmail().equalsIgnoreCase(seller.getEmail()))
+        if(!items.get(itemId).getSeller().getEmail().equalsIgnoreCase(seller.getEmail()))
         {
             return "Error: you did not create this auction.\n";
         }
         if(items.get(itemId).getHighestBidder() == null)
         {
-            itemManager.getInstance().removeItem(itemId);
+            items.remove(itemId);
             return "Item failed to sell - No bidders.\n";
         }
         if(items.get(itemId).getHighestBid() > items.get(itemId).getReservePrice())
         {
             AuctionItem item = items.get(itemId);
-            itemManager.getInstance().removeItem(itemId);
+            items.remove(itemId);
             return "The winner of the item is: " + item.getHighestBidder().toString();
         }
         else
         {
-            itemManager.getInstance().removeItem(itemId);
+            items.remove(itemId);
             return "Item failed to sell - highest bid is not higher than reserve price.\n";
         }
     }
@@ -119,17 +124,14 @@ public class Backend {
     }
 
     public String registerUser(Client newUser) {
-        System.out.println("GOODBYE");
         String email = newUser.getEmail();
-        System.out.println("WARGWAN");
         boolean duplicate = checkEmail(users, email);
-        System.out.println("HELLO!!!!!");
         if(duplicate)
         {
             return "Error - Email is already registered.\n";
         }
-        String result = addUser(newUser);
-        return result;
+        users.put(newUser.getEmail(), newUser);
+        return "User successfully registered.\n";
     }
 
     public Client getUser(String email) {
@@ -147,9 +149,6 @@ public class Backend {
 
     public boolean checkEmail(ConcurrentHashMap<String, Client> users, String Email)
     {
-        return false;
-        //return users.containsKey(Email);
-        /*
         for(Map.Entry mapElement : users.entrySet())
         {
             String oldEmail = (String) mapElement.getKey();
@@ -158,17 +157,9 @@ public class Backend {
                 return true;
             }
         }
-        return false;*/
+        return false;
 
     }
-    public String addUser(Client user)
-    {
-       // String output =  user.getName() + ',' + user.getEmail() + ',' + user.getPassword() + ',' + user.isSeller();
-        users.put(user.getEmail(), user);
-        //clientManager.writeToFile(output);
-        return "User successfully registered.\n";
-    }
-
 
     public static void main(String[] args) throws Exception {
         new Backend();

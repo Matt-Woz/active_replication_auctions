@@ -9,13 +9,14 @@ import org.jgroups.View;
 import org.jgroups.blocks.RequestOptions;
 import org.jgroups.blocks.ResponseMode;
 import org.jgroups.blocks.RpcDispatcher;
+import org.jgroups.util.Rsp;
 import org.jgroups.util.RspList;
 import utility.GroupUtilities;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
-
+import java.util.*;
 
 
 public class Frontend extends UnicastRemoteObject implements IServer, MembershipListener {
@@ -78,23 +79,19 @@ public class Frontend extends UnicastRemoteObject implements IServer, Membership
 
     @Override
     public int createListing(int AuctionId, String itemDescription, int startingPrice, int reservePrice, Client seller) throws RemoteException {
+        RspList<Integer> responses = null;
         try {
-            RspList<Integer> responses = this.dispatcher.callRemoteMethods(null, "createListing",
+            responses = this.dispatcher.callRemoteMethods(null, "createListing",
                     new Object[]{AuctionId, itemDescription, startingPrice, reservePrice, seller}, new Class[]{int.class, String.class, int.class, int.class, Client.class},
                     new RequestOptions(ResponseMode.GET_ALL, this.DISPATCHER_TIMEOUT));
 
-            System.out.printf("️⃣    received %d responses from the group\n", responses.size());
-            if (responses.isEmpty()) {
-                return -1;
-            }
-            //TODO Check responses are the same
-            return responses.getResults().get(0);
+            System.out.printf("  received %d responses from the group\n", responses.size());
 
         } catch(Exception e){
             System.err.println("   dispatcher exception:");
             e.printStackTrace();
-            return -1;
         }
+        return (int) checkEquality(responses);
     }
 
     @Override
@@ -104,7 +101,7 @@ public class Frontend extends UnicastRemoteObject implements IServer, Membership
                     new Object[]{itemId, seller}, new Class[]{int.class, Client.class},
                     new RequestOptions(ResponseMode.GET_ALL, this.DISPATCHER_TIMEOUT));
 
-            System.out.printf("️⃣    received %d responses from the group\n", responses.size());
+            System.out.printf("  received %d responses from the group\n", responses.size());
             if (responses.isEmpty()) {
                 return "Empty";
             }
@@ -124,7 +121,7 @@ public class Frontend extends UnicastRemoteObject implements IServer, Membership
             RspList<String> responses = this.dispatcher.callRemoteMethods(null, "displayListings",
                     null, null,
                     new RequestOptions(ResponseMode.GET_ALL, this.DISPATCHER_TIMEOUT));
-            System.out.printf("️⃣    received %d responses from the group\n", responses.size());
+            System.out.printf("   received %d responses from the group\n", responses.size());
             if (responses.isEmpty()) {
                 return "Empty";
             }
@@ -144,7 +141,7 @@ public class Frontend extends UnicastRemoteObject implements IServer, Membership
                     new Object[]{bidAmount,itemID, buyer}, new Class[]{int.class, int.class, Client.class},
                     new RequestOptions(ResponseMode.GET_ALL, this.DISPATCHER_TIMEOUT));
 
-            System.out.printf("️⃣    received %d responses from the group\n", responses.size());
+            System.out.printf(" received %d responses from the group\n", responses.size());
             if (responses.isEmpty()) {
                 return "Empty";
             }
@@ -166,7 +163,7 @@ public class Frontend extends UnicastRemoteObject implements IServer, Membership
                     new Object[]{newUser}, new Class[]{Client.class},
                     new RequestOptions(ResponseMode.GET_ALL, this.DISPATCHER_TIMEOUT));
 
-            System.out.printf("️⃣    received %d responses from the group\n", responses.size());
+            System.out.printf("  received %d responses from the group\n", responses.size());
             if (responses.isEmpty()) {
                 return "Empty";
             }
@@ -187,7 +184,7 @@ public class Frontend extends UnicastRemoteObject implements IServer, Membership
                     new Object[]{email}, new Class[]{String.class},
                     new RequestOptions(ResponseMode.GET_ALL, this.DISPATCHER_TIMEOUT));
 
-            System.out.printf("️⃣    received %d responses from the group\n", responses.size());
+            System.out.printf("  received %d responses from the group\n", responses.size());
             if (responses.isEmpty()) {
                 return null;
             }
@@ -199,6 +196,58 @@ public class Frontend extends UnicastRemoteObject implements IServer, Membership
             e.printStackTrace();
             return null;
         }
+    }
+
+    public Object checkEquality(RspList response)
+    {
+        List list = response.getResults();
+        Boolean isEqual = list.stream().distinct().limit(list.size()).count() <= 1;
+        if(isEqual)
+        {
+            return response.getResults().get(0);
+        }
+        else{
+            return killServer(response);
+        }
+    }
+
+    public Object killServer(RspList response)
+    {
+        Object mode = findModalResponse(response);
+        for(Iterator it = response.entrySet().iterator(); it.hasNext();){
+            Map.Entry entry = (Map.Entry) it.next();
+            Address add = (Address) entry.getKey();
+            Rsp rsp = (Rsp) entry.getValue();
+            Object object = rsp.getValue();
+            if(!Objects.equals(object,mode)){
+                try{
+                    this.dispatcher.callRemoteMethod(add, "kill", null, null, new RequestOptions(ResponseMode.GET_NONE, this.DISPATCHER_TIMEOUT));
+                } catch(Exception e){
+                    e.printStackTrace();
+                }
+            }
+        }
+        return mode;
+    }
+
+    public Object findModalResponse(RspList response)
+    {
+        List results = response.getResults();
+        int n = results.size();
+        int maxCount = 0;
+        int index = -1;
+        for(int i = 0; i < n; i++){
+            int count = 0;
+            for (int j = 0; j < n; j++){
+                if(results.get(i).equals(results.get(j)))
+                    count++;
+            }
+            if(count > maxCount){
+                maxCount = count;
+                index = i;
+            }
+        }
+        return results.get(index); //Returns majority element or first if no majority
     }
 
     public static void main(String[] args) {

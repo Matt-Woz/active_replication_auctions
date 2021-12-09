@@ -1,6 +1,7 @@
 package client;
 
 import java.io.Serializable;
+import java.util.Objects;
 
 /**
  * This class provides the Client object which represents the users of the auction system
@@ -69,4 +70,17 @@ public class Client implements Serializable {
                 ", email='" + email + '\'' +
                 '}';
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if(o == this){
+            return true;
+        }
+        if(!(o instanceof Client)){
+            return false;
+        }
+        Client c = (Client) o;
+        return name.equals(c.name) && email.equals(c.email) && password.equals(c.password) && isSeller==c.isSeller;
+    }
+
 }
