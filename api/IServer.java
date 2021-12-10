@@ -33,7 +33,6 @@ public interface IServer extends Remote {
 
     /**
      * This method displays the items currently up for auction on the server
-     *
      * @return String of listed items up for auction
      */
     String displayListings() throws RemoteException;

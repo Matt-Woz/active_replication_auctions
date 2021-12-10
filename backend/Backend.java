@@ -30,17 +30,16 @@ public class Backend {
         }
         // Make this instance of Backend a dispatcher in the channel (group)
         this.dispatcher = new RpcDispatcher(this.groupChannel, this);
-
+        //Get item and user hashmaps from oldest server on creation (If any)
         RspList<ConcurrentHashMap<Integer, AuctionItem>> itemResponse = dispatcher.callRemoteMethods(null, "getItems",
                 null, null,
                 new RequestOptions(ResponseMode.GET_ALL, DISPATCHER_TIMEOUT));
         RspList<ConcurrentHashMap<String, Client>> userResponse = dispatcher.callRemoteMethods(null, "getUsers",
                 null, null,
                 new RequestOptions(ResponseMode.GET_ALL, DISPATCHER_TIMEOUT));
-
         ConcurrentHashMap<Integer, AuctionItem> tempAuctionmap;
         if(itemResponse.isEmpty()) {
-            tempAuctionmap=new ConcurrentHashMap<Integer,AuctionItem>();
+            tempAuctionmap = new ConcurrentHashMap<>();
         }
         else{
             tempAuctionmap = itemResponse.getResults().get(0);
@@ -49,7 +48,7 @@ public class Backend {
         ConcurrentHashMap<String,Client> tempClientmap;
         System.out.println("The client list "+ userResponse.getResults());
         if(userResponse.isEmpty()) {
-            tempClientmap=new ConcurrentHashMap<String,Client>();
+            tempClientmap= new ConcurrentHashMap<>();
         }
         else{
             tempClientmap = userResponse.getResults().get(0);
@@ -64,7 +63,7 @@ public class Backend {
         return 0;
     }
 
-    public int createListing(String itemDescription, int startingPrice, int reservePrice, Client seller) {
+    public synchronized int createListing(String itemDescription, int startingPrice, int reservePrice, Client seller) {
             int i = 0;
             while(items.containsKey(i)){
                 i++;
@@ -75,7 +74,7 @@ public class Backend {
             return result;
         }
 
-    public String closeListing(int itemId, Client seller) {
+    public synchronized String closeListing(int itemId, Client seller) {
         if(items.get(itemId) == null)
         {
             return "Error: item does not exist.\n";
@@ -102,14 +101,14 @@ public class Backend {
         }
     }
 
-    public String displayListings() {
+    public synchronized String displayListings() {
         ArrayList<String> itemsDisplay = new ArrayList<>();
         items.forEach((k, v) -> itemsDisplay.add(v.toString()));
         String result = itemsDisplay.toString();
         System.out.println(result);
         return result;
     }
-    public String bid(int bidAmount, int itemID, Client buyer) {
+    public synchronized String bid(int bidAmount, int itemID, Client buyer) {
         if(items.get(itemID) == null)
         {
             return "Error: item does not exist.\n";
@@ -126,7 +125,7 @@ public class Backend {
         }
     }
 
-    public String registerUser(Client newUser) {
+    public synchronized String registerUser(Client newUser) {
         String email = newUser.getEmail();
         boolean duplicate = checkEmail(users, email);
         if(duplicate)
@@ -137,16 +136,16 @@ public class Backend {
         return "User successfully registered.\n";
     }
 
-    public Client getUser(String email) {
+    public synchronized Client getUser(String email) {
         Client result = users.get(email);
         return result;
     }
 
-    public ConcurrentHashMap<Integer, AuctionItem> getItems() {
+    public synchronized ConcurrentHashMap<Integer, AuctionItem> getItems() {
         return items;
     }
 
-    public ConcurrentHashMap<String, Client> getUsers() {
+    public synchronized ConcurrentHashMap<String, Client> getUsers() {
         return users;
     }
 
