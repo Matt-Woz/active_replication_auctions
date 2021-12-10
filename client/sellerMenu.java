@@ -61,7 +61,7 @@ public class sellerMenu {
             System.out.println("Error: Reserve price must be higher than starting price\n");
             return;
         }
-        server.createListing(auctionId++, description, startingPrice, reservePrice, seller);
+        server.createListing(description, startingPrice, reservePrice, seller);
     }
 
     /**

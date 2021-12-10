@@ -78,14 +78,17 @@ public class Frontend extends UnicastRemoteObject implements IServer, Membership
     }
 
     @Override
-    public int createListing(int AuctionId, String itemDescription, int startingPrice, int reservePrice, Client seller) throws RemoteException {
+    public int createListing(String itemDescription, int startingPrice, int reservePrice, Client seller) throws RemoteException {
         RspList<Integer> responses = null;
         try {
             responses = this.dispatcher.callRemoteMethods(null, "createListing",
-                    new Object[]{AuctionId, itemDescription, startingPrice, reservePrice, seller}, new Class[]{int.class, String.class, int.class, int.class, Client.class},
+                    new Object[]{itemDescription, startingPrice, reservePrice, seller}, new Class[]{String.class, int.class, int.class, Client.class},
                     new RequestOptions(ResponseMode.GET_ALL, this.DISPATCHER_TIMEOUT));
 
             System.out.printf("  received %d responses from the group\n", responses.size());
+            if (responses.isEmpty()) {
+                return -1;
+            }
 
         } catch(Exception e){
             System.err.println("   dispatcher exception:");
@@ -96,8 +99,9 @@ public class Frontend extends UnicastRemoteObject implements IServer, Membership
 
     @Override
     public String closeListing(int itemId, Client seller) throws RemoteException {
+        RspList<String> responses = null;
         try {
-            RspList<String> responses = this.dispatcher.callRemoteMethods(null, "closeListing",
+            responses = this.dispatcher.callRemoteMethods(null, "closeListing",
                     new Object[]{itemId, seller}, new Class[]{int.class, Client.class},
                     new RequestOptions(ResponseMode.GET_ALL, this.DISPATCHER_TIMEOUT));
 
@@ -105,39 +109,37 @@ public class Frontend extends UnicastRemoteObject implements IServer, Membership
             if (responses.isEmpty()) {
                 return "Empty";
             }
-            //TODO Check responses are the same
-            return responses.getResults().get(0);
 
         } catch(Exception e){
             System.err.println("   dispatcher exception:");
             e.printStackTrace();
-            return "Error";
         }
+        return (String) checkEquality(responses);
     }
 
     @Override
     public String displayListings() throws RemoteException {
+        RspList<String> responses = null;
         try {
-            RspList<String> responses = this.dispatcher.callRemoteMethods(null, "displayListings",
+            responses = this.dispatcher.callRemoteMethods(null, "displayListings",
                     null, null,
                     new RequestOptions(ResponseMode.GET_ALL, this.DISPATCHER_TIMEOUT));
             System.out.printf("   received %d responses from the group\n", responses.size());
             if (responses.isEmpty()) {
                 return "Empty";
             }
-            //TODO Check responses are the same
-            return responses.getResults().get(0);
         } catch(Exception e){
             System.err.println("   dispatcher exception:");
             e.printStackTrace();
-            return "Error";
         }
+        return (String) checkEquality(responses);
     }
 
     @Override
     public String bid(int bidAmount, int itemID, Client buyer) throws RemoteException {
+        RspList<String> responses = null;
         try {
-            RspList<String> responses = this.dispatcher.callRemoteMethods(null, "bid",
+            responses = this.dispatcher.callRemoteMethods(null, "bid",
                     new Object[]{bidAmount,itemID, buyer}, new Class[]{int.class, int.class, Client.class},
                     new RequestOptions(ResponseMode.GET_ALL, this.DISPATCHER_TIMEOUT));
 
@@ -145,21 +147,20 @@ public class Frontend extends UnicastRemoteObject implements IServer, Membership
             if (responses.isEmpty()) {
                 return "Empty";
             }
-            //TODO Check responses are the same
-            return responses.getResults().get(0);
 
         } catch(Exception e){
             System.err.println("   dispatcher exception:");
             e.printStackTrace();
-            return "Error";
         }
+        return (String) checkEquality(responses);
 
     }
 
     @Override
     public String registerUser(Client newUser) throws RemoteException {
+        RspList<String> responses = null;
         try {
-            RspList<String> responses = this.dispatcher.callRemoteMethods(null, "registerUser",
+            responses = this.dispatcher.callRemoteMethods(null, "registerUser",
                     new Object[]{newUser}, new Class[]{Client.class},
                     new RequestOptions(ResponseMode.GET_ALL, this.DISPATCHER_TIMEOUT));
 
@@ -167,20 +168,18 @@ public class Frontend extends UnicastRemoteObject implements IServer, Membership
             if (responses.isEmpty()) {
                 return "Empty";
             }
-            //TODO Check responses are the same
-            return responses.getResults().get(0);
-
         } catch(Exception e){
             System.err.println("   dispatcher exception:");
             e.printStackTrace();
-            return "Error";
         }
+        return (String) checkEquality(responses);
     }
 
     @Override
     public Client getUser(String email) throws RemoteException {
+        RspList<Client> responses = null;
         try {
-            RspList<Client> responses = this.dispatcher.callRemoteMethods(null, "getUser",
+            responses = this.dispatcher.callRemoteMethods(null, "getUser",
                     new Object[]{email}, new Class[]{String.class},
                     new RequestOptions(ResponseMode.GET_ALL, this.DISPATCHER_TIMEOUT));
 
@@ -188,14 +187,12 @@ public class Frontend extends UnicastRemoteObject implements IServer, Membership
             if (responses.isEmpty()) {
                 return null;
             }
-            //TODO Check responses are the same
-            return responses.getResults().get(0);
 
         } catch(Exception e){
             System.err.println("   dispatcher exception:");
             e.printStackTrace();
-            return null;
         }
+        return (Client) checkEquality(responses);
     }
 
     public Object checkEquality(RspList response)

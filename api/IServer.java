@@ -15,13 +15,12 @@ public interface IServer extends Remote {
     /**
      * This method creates the instance of an auctionItem and stores it in a hashmap
      *
-     * @param AuctionID Unique ID of auction
      * @param itemDescription Description of item as written by seller creating it
      * @param startingPrice   Starting price of auction item
      * @param reservePrice    Reserve price of auction item
      * @param seller          Seller client creating the listing
      */
-    int createListing(int AuctionID, String itemDescription, int startingPrice, int reservePrice, Client seller) throws RemoteException;
+    int createListing(String itemDescription, int startingPrice, int reservePrice, Client seller) throws RemoteException;
 
     /**
      * This method does some validity and authentication checks and closes the listing

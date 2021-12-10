@@ -18,12 +18,10 @@ public class Backend {
     private final int DISPATCHER_TIMEOUT = 1000;
     private JChannel groupChannel;
     private RpcDispatcher dispatcher;
-    private int requestCount;
     private ConcurrentHashMap<Integer, AuctionItem> items;
     private ConcurrentHashMap<String, Client> users;
 
     public Backend() throws Exception {
-        this.requestCount = 0;
 
         // Connect to the group (channel)
         this.groupChannel = GroupUtilities.connect();
@@ -66,11 +64,16 @@ public class Backend {
         return 0;
     }
 
-    public int createListing(int AuctionID, String itemDescription, int startingPrice, int reservePrice, Client seller) {
-        items.put(AuctionID, new AuctionItem(AuctionID, itemDescription, startingPrice, reservePrice, seller));
-        int result = items.get(AuctionID).getAuctionId();
-        return result;
-    }
+    public int createListing(String itemDescription, int startingPrice, int reservePrice, Client seller) {
+            int i = 0;
+            while(items.containsKey(i)){
+                i++;
+            }
+            AuctionItem newItem = new AuctionItem(i,itemDescription, startingPrice, reservePrice, seller);
+            items.put(i, newItem);
+            int result = newItem.getAuctionId();
+            return result;
+        }
 
     public String closeListing(int itemId, Client seller) {
         if(items.get(itemId) == null)
@@ -119,7 +122,7 @@ public class Backend {
         }
         else
         {
-            return "Highest bid higher than your bidding price.\n";
+            return "Highest bid higher or equal to your bidding price.\n";
         }
     }
 
